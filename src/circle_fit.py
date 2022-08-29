@@ -10,18 +10,19 @@ from matplotlib import pyplot as p, cm, colors
 
 class CircleFit:
     methods = ['algebraic', 'leastsq', 'leastsq+jacobian', 'odr', 'odr+jacobian']
-    def __init__(self, xdata: np.ndarray, ydata: np.ndarray, method: str = 'algebraic'):
+    def __init__(self, xdata: np.ndarray, ydata: np.ndarray, method: str | None = 'algebraic'):
         """Fit a circle to data.
 
         Args:
             xdata (np.ndarray): X coordinates of data
             ydata (np.ndarray): Y coordinates of data
-            method (str): Fit method, can be one of 'algebraic', 'leastsq', 'leastsq+jacobian', 'odr' and 'odr+jacobian'. Default is 'algebraic'.
+            method (str): Fit method, can be one of 'algebraic', 'leastsq', 'leastsq+jacobian', 'odr' and 'odr+jacobian' or None. Default is 'algebraic'.
+                          In case method is None, no fit is performed at init. No parameters are set, and will raise RuntimeError if accessed.
 
         Raises:
             RuntimeError: Invalid method, fit fails to converge (with ODR methods.)
         """
-        if method not in CircleFit.methods:
+        if method is not None and method not in CircleFit.methods:
             raise RuntimeError('Method %s not valid'%(method))
         self._method = method
         self._x = xdata.copy()
@@ -37,6 +38,8 @@ class CircleFit:
             self._odr()
         elif method == 'odr+jacobian':
             self._odr_jacobian()
+        elif method == None:
+            pass
 
     def fit_circle(self, method: str = 'algebraic'):
         """Fit circle using the specified method
@@ -258,10 +261,10 @@ class CircleFit:
         r0 = np.sqrt((data.x[0]-xc0)**2 +(data.x[1] -yc0)**2).mean()
         return xc0, yc0, r0
 
-# for implicit function :
-#       data.x contains both coordinates of the points
-#       data.y is the dimensionality of the response
     def _odr_jacobian(self):
+        # for implicit function :
+        # data.x contains both coordinates of the points
+        # data.y is the dimensionality of the response
         lsc_data  = odr.Data(np.row_stack([self._x, self._y]), y=1)
         lsc_model = odr.Model(CircleFit._calc_radius_implicit, implicit=True, estimate=CircleFit._odr_calc_estimate, fjacd=CircleFit._odr_jacd, fjacb=CircleFit._odr_jacb)
         lsc_odr   = odr.ODR(lsc_data, lsc_model)    # beta0 has been replaced by an estimate function
@@ -284,7 +287,7 @@ class CircleFit:
         l3 = fmt % (self._method, self._center[0], self._center[1], self._radius, self._rad_std, self._residu, self._residu2)
         return l1 + l2 + l3 + '\n\n'
 
-    def plot(self, residu2: bool = False, first_plot: bool = True, last_plot: bool = True, force_plot_data: bool = False, figsize: tuple(float, float) | None = (10, 10), dpi: int | None = 300, facecolor: p._ColorLike | None = 'white', edgecolor: p._ColorLike | None = 'black'):
+    def plot(self, residu2: bool = False, figsize: tuple(float, float) | None = (10, 10), dpi: int | None = 100, facecolor: p._ColorLike | None = 'white', edgecolor: p._ColorLike | None = 'black'):
         """Plot the results of circle fit.
 
         Args:
@@ -293,9 +296,8 @@ class CircleFit:
             last_plot (bool, optional): Turn this on for the last plot in a series to compare different algorithms. Defaults to True.
             force_plot_data (bool, optional): Turn this on to compare fit with two different data sets. Defaults to False.
         """
-        if first_plot:
-            p.close('all')
-            f = p.figure(None, figsize, dpi, facecolor, edgecolor)
+        p.close('all')
+        f = p.figure(None, figsize, dpi, facecolor, edgecolor)
         p.axis('equal')
 
         theta_fit = np.linspace(-np.pi, np.pi, 180)
@@ -340,8 +342,7 @@ class CircleFit:
         else       : cbar.set_label('Residu')
 
         # plot data
-        if first_plot or force_plot_data:
-            p.plot(self._x, self._y, 'rx', label='data', ms=8, mec='b', mew=1)
+        p.plot(self._x, self._y, 'rx', label='data', ms=8, mec='b', mew=1)
         p.legend(loc='best',labelspacing=0.1 )
 
         p.xlim(xmin=vmin, xmax=vmax)
@@ -349,5 +350,4 @@ class CircleFit:
 
         p.grid()
         p.title('Least Squares Circle')
-        if last_plot:
-            p.show()
+        p.show()
