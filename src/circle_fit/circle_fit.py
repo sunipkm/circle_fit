@@ -1,12 +1,10 @@
-"""
-Source: 
-http://www.scipy.org/Cookbook/Least_Squares_Circle
-"""
 from __future__ import annotations
 import numpy as np
 from scipy import optimize
 from scipy import  odr
 from matplotlib import pyplot as p, cm, colors
+
+# Source: http://www.scipy.org/Cookbook/Least_Squares_Circle
 
 class CircleFit:
     methods = ['algebraic', 'leastsq', 'leastsq+jacobian', 'odr', 'odr+jacobian']
